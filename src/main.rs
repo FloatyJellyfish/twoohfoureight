@@ -54,20 +54,25 @@ const CELL_PAD: f32 = 10.0;
 const CELL_SIZE: f32 = (BOARD_SIZE - (CELL_PAD * (CELL_DIM + 1) as f32)) / CELL_DIM as f32;
 const MAX_SCORE: u32 = 2048;
 const COLORS: u32 = MAX_SCORE.ilog2() + 2;
+const WIDTH: i32 = 500;
+const HEIGHT: i32 = WIDTH;
 
 fn main() {
     let (mut rl, thread) = raylib::init()
-    .size(500, 500)
+    .size(WIDTH, HEIGHT)
     .title("Hello, World")
         .build();
     let mut rng = rand::thread_rng();
     
     let board = Rectangle { x: 50.0, y: 50.0, width: BOARD_SIZE, height: BOARD_SIZE };
     let mut cells = random_cells(&mut rng);
+    let mut score = 0;
 
     while !rl.window_should_close() {
+        // Reset
         if rl.is_key_pressed(KeyboardKey::KEY_R) {
             cells = random_cells(&mut rng);
+            score = 0;
         }
 
         let mut needs_combined_reset = false;
@@ -84,6 +89,7 @@ fn main() {
                     while cell_x < cells[0].len() - 1 {
                         if cells[y][cell_x + 1].is_occupied() {
                             if cells[y][cell_x + 1] == cells[y][x] && !cells[y][cell_x + 1].combined && !cells[y][x].combined {
+                                score += cells[y][x].value * 2;
                                 cells[y][cell_x + 1] = Cell { value: cells[y][x].value * 2, combined: true};
                                 cells[y][x] = Cell::empty();
                                 needs_combined_reset = true;
@@ -109,6 +115,7 @@ fn main() {
                     while cell_x > 0 {
                         if cells[y][cell_x - 1].is_occupied() {
                             if cells[y][cell_x - 1] == cells[y][x] && !cells[y][cell_x - 1].combined && !cells[y][x].combined {
+                                score += cells[y][x].value * 2;
                                 cells[y][cell_x - 1] = Cell { value: cells[y][x].value * 2, combined: true};
                                 cells[y][x] = Cell::empty();
                                 needs_combined_reset = true;
@@ -134,6 +141,7 @@ fn main() {
                     while cell_y < cells.len() - 1 {
                         if cells[cell_y + 1][x].is_occupied() {
                             if cells[cell_y + 1][x] == cells[y][x] && !cells[cell_y + 1][x].combined && !cells[y][x].combined {
+                                score += cells[y][x].value * 2;
                                 cells[cell_y + 1][x] = Cell { value: cells[y][x].value * 2, combined: true};
                                 cells[y][x] = Cell::empty();
                                 needs_combined_reset = true;
@@ -159,6 +167,7 @@ fn main() {
                     while cell_y > 0 {
                         if cells[cell_y - 1][x].is_occupied() {
                             if cells[cell_y - 1][x] == cells[y][x] && !cells[cell_y - 1][x].combined && !cells[y][x].combined {
+                                score += cells[y][x].value * 2;
                                 cells[cell_y - 1][x] = Cell { value: cells[y][x].value * 2, combined: true};
                                 cells[y][x] = Cell::empty();
                                 needs_combined_reset = true;
@@ -206,7 +215,14 @@ fn main() {
 
         let mut d = rl.begin_drawing(&thread);
         d.clear_background(Color::from_hex("181818").unwrap());
-
+        let text_size = d.get_font_default().measure_text(format!("{score}").as_str(), 30.0, 2.0);
+        d.draw_text(
+            format!("{score}").as_str(), 
+            (WIDTH as f32 / 2.0 - text_size.x / 2.0) as i32,
+            (10.0) as i32,
+            30, 
+            Color::BEIGE
+        );
         
         draw_board(d, cells, board);
     }
