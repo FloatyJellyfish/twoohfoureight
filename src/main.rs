@@ -48,6 +48,13 @@ impl Display for Cell {
     }
 }
 
+#[derive(PartialEq)]
+enum State {
+    Playing,
+    GameOwover,
+    Victory,
+}
+
 const BOARD_SIZE: f32 = 400.0;
 const CELL_DIM: usize = 4;
 const CELL_PAD: f32 = 10.0;
@@ -67,6 +74,7 @@ fn main() {
     let board = Rectangle { x: 50.0, y: 50.0, width: BOARD_SIZE, height: BOARD_SIZE };
     let mut cells = random_cells(&mut rng);
     let mut score = 0;
+    let mut state = State::Playing;
 
     while !rl.window_should_close() {
         // Reset
@@ -75,141 +83,48 @@ fn main() {
             score = 0;
         }
 
-        let mut needs_combined_reset = false;
-        let mut moved = false;
-        // Movement
-        if rl.is_key_released(KeyboardKey::KEY_RIGHT) {
-            moved = true;
-            for y in 0..cells.len() {
-                for x in (0..(cells[0].len() - 1)).rev() {
-                    if cells[y][x].is_empty() {
-                        continue;
-                    }
-                    let mut cell_x = x;
-                    while cell_x < cells[0].len() - 1 {
-                        if cells[y][cell_x + 1].is_occupied() {
-                            if cells[y][cell_x + 1] == cells[y][x] && !cells[y][cell_x + 1].combined && !cells[y][x].combined {
-                                score += cells[y][x].value * 2;
-                                cells[y][cell_x + 1] = Cell { value: cells[y][x].value * 2, combined: true};
-                                cells[y][x] = Cell::empty();
-                                needs_combined_reset = true;
-                            }
-                            break;
-                        } 
-                        cell_x += 1;
-                    }
-                    if cell_x != x {
-                        cells[y][cell_x] = cells[y][x];
-                        cells[y][x] = Cell::empty();
-                    }
-                }
+        if state == State::Playing {
+            let mut moved = false;
+            // Movement
+            if rl.is_key_released(KeyboardKey::KEY_RIGHT) {
+                moved = true;
+                score += slide_right(&mut cells);
+            } else if rl.is_key_released(KeyboardKey::KEY_LEFT) {
+                moved = true;
+                score += slide_left(&mut cells);
+            } else if rl.is_key_released(KeyboardKey::KEY_DOWN) {
+                moved = true;
+                score += slide_down(&mut cells);
+            } else if rl.is_key_released(KeyboardKey::KEY_UP) {
+                moved = true;
+                score += slide_up(&mut cells);
             }
-        } else if rl.is_key_released(KeyboardKey::KEY_LEFT) {
-            moved = true;
-            for y in 0..cells.len() {
-                for x in 1..cells[0].len() {
-                    if cells[y][x].is_empty() {
-                        continue;
-                    }
-                    let mut cell_x = x;
-                    while cell_x > 0 {
-                        if cells[y][cell_x - 1].is_occupied() {
-                            if cells[y][cell_x - 1] == cells[y][x] && !cells[y][cell_x - 1].combined && !cells[y][x].combined {
-                                score += cells[y][x].value * 2;
-                                cells[y][cell_x - 1] = Cell { value: cells[y][x].value * 2, combined: true};
-                                cells[y][x] = Cell::empty();
-                                needs_combined_reset = true;
-                            }
-                            break;
-                        }
-                        cell_x -= 1;
-                    }
-                    if cell_x != x {
-                        cells[y][cell_x] = cells[y][x];
-                        cells[y][x] = Cell::empty();
-                    }
-                }
-            }
-        } else if rl.is_key_released(KeyboardKey::KEY_DOWN) {
-            moved = true;
-            for y in (0..(cells.len() - 1)).rev() {
-                for x in 0..cells[0].len() {
-                    if cells[y][x].is_empty() {
-                        continue;
-                    }
-                    let mut cell_y = y;
-                    while cell_y < cells.len() - 1 {
-                        if cells[cell_y + 1][x].is_occupied() {
-                            if cells[cell_y + 1][x] == cells[y][x] && !cells[cell_y + 1][x].combined && !cells[y][x].combined {
-                                score += cells[y][x].value * 2;
-                                cells[cell_y + 1][x] = Cell { value: cells[y][x].value * 2, combined: true};
-                                cells[y][x] = Cell::empty();
-                                needs_combined_reset = true;
-                            }
-                            break;
-                        }
-                        cell_y += 1;
-                    }
-                    if cell_y != y {
-                        cells[cell_y][x] = cells[y][x];
-                        cells[y][x] = Cell::empty();
-                    }
-                }
-            }
-        } else if rl.is_key_released(KeyboardKey::KEY_UP) {
-            moved = true;
-            for y in 1..cells.len() {
-                for x in 0..cells[0].len() {
-                    if cells[y][x].is_empty() {
-                        continue;
-                    }
-                    let mut cell_y = y;
-                    while cell_y > 0 {
-                        if cells[cell_y - 1][x].is_occupied() {
-                            if cells[cell_y - 1][x] == cells[y][x] && !cells[cell_y - 1][x].combined && !cells[y][x].combined {
-                                score += cells[y][x].value * 2;
-                                cells[cell_y - 1][x] = Cell { value: cells[y][x].value * 2, combined: true};
-                                cells[y][x] = Cell::empty();
-                                needs_combined_reset = true;
-                            }
-                            break;
-                        }
-                        cell_y -= 1;
-                    }
-                    if cell_y != y {
-                        cells[cell_y][x] = cells[y][x];
-                        cells[y][x] = Cell::empty();
-                    }
-                }
-            }
-        }
-
-        if needs_combined_reset {
+    
             for y in 0..cells.len() {
                 for x in 0..cells[y].len() {
                     cells[y][x].combined = false;
                 }
             }
-        }
-        
-        if moved { 
-            let mut has_empty_cell = false;
-            for y in 0..cells.len() {
-                for x in 0..cells[y].len() {
-                    has_empty_cell |= cells[y][x].is_empty();
-                }
-            }
-            if has_empty_cell {
-                loop {
-                    let x = rng.gen_range(0..CELL_DIM);
-                    let y = rng.gen_range(0..CELL_DIM);
-                    if cells[y][x].is_empty() {
-                       cells[y][x] = Cell::occupied(2_i32.pow(rng.gen::<u32>() % 2 + 1) as u32);
-                       break;
+            
+            if moved { 
+                let mut has_empty_cell = false;
+                for y in 0..cells.len() {
+                    for x in 0..cells[y].len() {
+                        has_empty_cell |= cells[y][x].is_empty();
                     }
                 }
-            } else {
-                println!("Game OwOver");
+                if has_empty_cell {
+                    loop {
+                        let x = rng.gen_range(0..CELL_DIM);
+                        let y = rng.gen_range(0..CELL_DIM);
+                        if cells[y][x].is_empty() {
+                           cells[y][x] = Cell::occupied(2_i32.pow(rng.gen::<u32>() % 2 + 1) as u32);
+                           break;
+                        }
+                    }
+                } else {
+                    state = State::GameOwover;
+                }
             }
         }
 
@@ -223,12 +138,24 @@ fn main() {
             30, 
             Color::BEIGE
         );
+        draw_board(&mut d, cells, board);
+
+        if state == State::GameOwover {
+            d.draw_rectangle_rounded(board, 0.05, 10, Color::new(64, 64, 128, 196));
+            let text_size = d.get_font_default().measure_text("Game OwOver", 50.0, 2.0);
+            d.draw_text(
+                "Game OwOver",
+                (board.x + board.width / 2.0 - text_size.x / 2.0) as i32, 
+                (board.y + board.height / 2.0 - text_size.y / 2.0) as i32, 
+                50, 
+                Color::BEIGE
+            );       
+        }
         
-        draw_board(d, cells, board);
     }
 }
 
-fn draw_board(mut d: RaylibDrawHandle, cells: [[Cell; CELL_DIM]; CELL_DIM], board: Rectangle) {
+fn draw_board(d: &mut RaylibDrawHandle, cells: [[Cell; CELL_DIM]; CELL_DIM], board: Rectangle) {
     d.draw_rectangle_rounded_lines(board, 0.05, 10, 2.0, Color::BEIGE);
     let base_color = Color::color_to_hsv(&Color::from_hex("4444FF").unwrap());
     for y in 0..cells.len() {
@@ -291,4 +218,116 @@ fn random_cells(rng: &mut ThreadRng) -> [[Cell; CELL_DIM]; CELL_DIM] {
         }
     }
     cells
+}
+
+fn slide_right(cells: &mut [[Cell; CELL_DIM]; CELL_DIM]) -> u32 {
+    let mut score = 0;
+    for y in 0..cells.len() {
+        for x in (0..(cells[0].len() - 1)).rev() {
+            if cells[y][x].is_empty() {
+                continue;
+            }
+            let mut cell_x = x;
+            while cell_x < cells[0].len() - 1 {
+                if cells[y][cell_x + 1].is_occupied() {
+                    if cells[y][cell_x + 1] == cells[y][x] && !cells[y][cell_x + 1].combined && !cells[y][x].combined {
+                        score += cells[y][x].value * 2;
+                        cells[y][cell_x + 1] = Cell { value: cells[y][x].value * 2, combined: true};
+                        cells[y][x] = Cell::empty();
+                    }
+                    break;
+                } 
+                cell_x += 1;
+            }
+            if cell_x != x {
+                cells[y][cell_x] = cells[y][x];
+                cells[y][x] = Cell::empty();
+            }
+        }
+    }
+    score
+}
+
+fn slide_left(cells: &mut [[Cell; CELL_DIM]; CELL_DIM]) -> u32 {
+    let mut score = 0;
+    for y in 0..cells.len() {
+        for x in 1..cells[0].len() {
+            if cells[y][x].is_empty() {
+                continue;
+            }
+            let mut cell_x = x;
+            while cell_x > 0 {
+                if cells[y][cell_x - 1].is_occupied() {
+                    if cells[y][cell_x - 1] == cells[y][x] && !cells[y][cell_x - 1].combined && !cells[y][x].combined {
+                        score += cells[y][x].value * 2;
+                        cells[y][cell_x - 1] = Cell { value: cells[y][x].value * 2, combined: true};
+                        cells[y][x] = Cell::empty();
+                    }
+                    break;
+                }
+                cell_x -= 1;
+            }
+            if cell_x != x {
+                cells[y][cell_x] = cells[y][x];
+                cells[y][x] = Cell::empty();
+            }
+        }
+    }
+    score
+}
+
+fn slide_down(cells: &mut [[Cell; CELL_DIM]; CELL_DIM]) -> u32 {
+    let mut score = 0;
+    for y in (0..(cells.len() - 1)).rev() {
+        for x in 0..cells[0].len() {
+            if cells[y][x].is_empty() {
+                continue;
+            }
+            let mut cell_y = y;
+            while cell_y < cells.len() - 1 {
+                if cells[cell_y + 1][x].is_occupied() {
+                    if cells[cell_y + 1][x] == cells[y][x] && !cells[cell_y + 1][x].combined && !cells[y][x].combined {
+                        score += cells[y][x].value * 2;
+                        cells[cell_y + 1][x] = Cell { value: cells[y][x].value * 2, combined: true};
+                        cells[y][x] = Cell::empty();
+                    }
+                    break;
+                }
+                cell_y += 1;
+            }
+            if cell_y != y {
+                cells[cell_y][x] = cells[y][x];
+                cells[y][x] = Cell::empty();
+            }
+        }
+    }
+    score
+}
+
+fn slide_up(cells: &mut [[Cell; CELL_DIM]; CELL_DIM]) -> u32 {
+    let mut score = 0;
+    for y in 1..cells.len() {
+        for x in 0..cells[0].len() {
+            if cells[y][x].is_empty() {
+                continue;
+            }
+            let mut cell_y = y;
+            while cell_y > 0 {
+                if cells[cell_y - 1][x].is_occupied() {
+                    if cells[cell_y - 1][x] == cells[y][x] && !cells[cell_y - 1][x].combined && !cells[y][x].combined {
+                        score += cells[y][x].value * 2;
+                        cells[cell_y - 1][x] = Cell { value: cells[y][x].value * 2, combined: true};
+                        cells[y][x] = Cell::empty();
+                    }
+                    break;
+                }
+                cell_y -= 1;
+            }
+            if cell_y != y {
+                cells[cell_y][x] = cells[y][x];
+                cells[y][x] = Cell::empty();
+            }
+        }
+    }
+    score
 }
