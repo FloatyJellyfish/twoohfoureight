@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use rand::{Rng, thread_rng};
 use raylib::prelude::*;
 use std::fmt::{Display, Error, Formatter};
