@@ -147,9 +147,9 @@ const BOARD_SIZE: f32 = 400.0;
 const CELL_DIM: usize = 4;
 const CELL_PAD: f32 = 10.0;
 const CELL_SIZE: f32 = (BOARD_SIZE - (CELL_PAD * (CELL_DIM + 1) as f32)) / CELL_DIM as f32;
-const CELL_BASE_COLOR: Color = Color::new(0x44, 0x44, 0xff, 0xff);
+const BACKGROUND_COLOR: Color = Color::new(0x18, 0x18, 0x18, 0xff);
 const MAX_SCORE: u32 = 2048;
-const COLORS: u32 = MAX_SCORE.ilog2() + 2;
+const COLORS: u32 = MAX_SCORE.ilog2();
 const WIDTH: i32 = 500;
 const HEIGHT: i32 = WIDTH;
 const PARTICLE_LIFE: f32 = 200.0;
@@ -296,7 +296,7 @@ fn draw_board(d: &mut RaylibDrawHandle, cells: [[Cell; CELL_DIM]; CELL_DIM], boa
                     (cell_x + CELL_SIZE / 2.0 - text_size.x / 2.0) as i32,
                     (cell_y + CELL_SIZE / 2.0 - text_size.y / 2.0) as i32,
                     30, 
-                    Color::BEIGE
+                    BACKGROUND_COLOR,
                 );
             }
         }
@@ -304,9 +304,7 @@ fn draw_board(d: &mut RaylibDrawHandle, cells: [[Cell; CELL_DIM]; CELL_DIM], boa
 }
 
 fn get_cell_color(cell_value: u32) -> Color {
-    let mut hsv = CELL_BASE_COLOR.color_to_hsv();
-    hsv.z = 1.0 - (hsv.z / COLORS as f32 * cell_value.ilog2() as f32);
-    Color::color_from_hsv(hsv.x, hsv.y, hsv.z)
+    Color::color_from_hsv((cell_value.ilog2() as f32 - 1.0) / COLORS as f32 * 360.0, 0.95, 1.0)
 }
 
 fn random_cells() -> [[Cell; CELL_DIM]; CELL_DIM] {
