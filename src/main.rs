@@ -139,15 +139,17 @@ struct GameState {
     score: u32,
     state: State,
     particles: Vec<Particle>,
+    board: Rectangle,
 }
 
 impl GameState {
-    fn new() -> Self {
+    fn new(size: Rectangle) -> Self {
         GameState {
             cells: [[Cell::empty(); CELL_DIM]; CELL_DIM],
             score: 0,
             state: State::Playing,
             particles: Vec::new(),
+            board: size,
         }
     }
 
@@ -156,6 +158,178 @@ impl GameState {
         self.score = 0;
         self.state = State::Playing;
         self.particles = Vec::new();
+    }
+
+    fn slide_right(&mut self) {
+        for y in 0..self.cells.len() {
+            for x in (0..(self.cells[0].len() - 1)).rev() {
+                if self.cells[y][x].is_empty() {
+                    continue;
+                }
+                let mut cell_x = x;
+                while cell_x < self.cells[0].len() - 1 {
+                    if self.cells[y][cell_x + 1].is_occupied() {
+                        if self.cells[y][cell_x + 1] == self.cells[y][x]
+                            && !self.cells[y][cell_x + 1].combined
+                            && !self.cells[y][x].combined
+                        {
+                            self.score += self.cells[y][x].value * 2;
+                            self.cells[y][cell_x + 1] = Cell {
+                                value: self.cells[y][x].value * 2,
+                                combined: true,
+                            };
+                            let cell_px_x = self.board.x
+                                + CELL_PAD * ((cell_x + 1) as f32 + 1.0)
+                                + (cell_x + 1) as f32 * CELL_SIZE;
+                            let cell_px_y =
+                                self.board.y + CELL_PAD * (y as f32 + 1.0) + y as f32 * CELL_SIZE;
+                            self.particles.append(&mut generate_particles(
+                                cell_px_x + CELL_SIZE / 2.0,
+                                cell_px_y + CELL_SIZE / 2.0,
+                                get_cell_color(self.cells[y][x].value),
+                                20,
+                            ));
+                            self.cells[y][x] = Cell::empty();
+                        }
+                        break;
+                    }
+                    cell_x += 1;
+                }
+                if cell_x != x {
+                    self.cells[y][cell_x] = self.cells[y][x];
+                    self.cells[y][x] = Cell::empty();
+                }
+            }
+        }
+    }
+    
+    fn slide_left(&mut self) {
+        for y in 0..self.cells.len() {
+            for x in 1..self.cells[0].len() {
+                if self.cells[y][x].is_empty() {
+                    continue;
+                }
+                let mut cell_x = x;
+                while cell_x > 0 {
+                    if self.cells[y][cell_x - 1].is_occupied() {
+                        if self.cells[y][cell_x - 1] == self.cells[y][x]
+                            && !self.cells[y][cell_x - 1].combined
+                            && !self.cells[y][x].combined
+                        {
+                            self.score += self.cells[y][x].value * 2;
+                            self.cells[y][cell_x - 1] = Cell {
+                                value: self.cells[y][x].value * 2,
+                                combined: true,
+                            };
+                            let cell_px_x = self.board.x
+                                + CELL_PAD * ((cell_x - 1) as f32 + 1.0)
+                                + (cell_x - 1) as f32 * CELL_SIZE;
+                            let cell_px_y =
+                                self.board.y + CELL_PAD * (y as f32 + 1.0) + y as f32 * CELL_SIZE;
+                            self.particles.append(&mut generate_particles(
+                                cell_px_x + CELL_SIZE / 2.0,
+                                cell_px_y + CELL_SIZE / 2.0,
+                                get_cell_color(self.cells[y][x].value),
+                                20,
+                            ));
+                            self.cells[y][x] = Cell::empty();
+                        }
+                        break;
+                    }
+                    cell_x -= 1;
+                }
+                if cell_x != x {
+                    self.cells[y][cell_x] = self.cells[y][x];
+                    self.cells[y][x] = Cell::empty();
+                }
+            }
+        }
+    }
+    
+    fn slide_down(&mut self) {
+        for y in (0..(self.cells.len() - 1)).rev() {
+            for x in 0..self.cells[0].len() {
+                if self.cells[y][x].is_empty() {
+                    continue;
+                }
+                let mut cell_y = y;
+                while cell_y < self.cells.len() - 1 {
+                    if self.cells[cell_y + 1][x].is_occupied() {
+                        if self.cells[cell_y + 1][x] == self.cells[y][x]
+                            && !self.cells[cell_y + 1][x].combined
+                            && !self.cells[y][x].combined
+                        {
+                            self.score += self.cells[y][x].value * 2;
+                            self.cells[cell_y + 1][x] = Cell {
+                                value: self.cells[y][x].value * 2,
+                                combined: true,
+                            };
+                            let cell_px_x =
+                                self.board.x + CELL_PAD * (x as f32 + 1.0) + x as f32 * CELL_SIZE;
+                            let cell_px_y = self.board.y
+                                + CELL_PAD * ((cell_y + 1) as f32 + 1.0)
+                                + (cell_y + 1) as f32 * CELL_SIZE;
+                            self.particles.append(&mut generate_particles(
+                                cell_px_x + CELL_SIZE / 2.0,
+                                cell_px_y + CELL_SIZE / 2.0,
+                                get_cell_color(self.cells[y][x].value),
+                                20,
+                            ));
+                            self.cells[y][x] = Cell::empty();
+                        }
+                        break;
+                    }
+                    cell_y += 1;
+                }
+                if cell_y != y {
+                    self.cells[cell_y][x] = self.cells[y][x];
+                    self.cells[y][x] = Cell::empty();
+                }
+            }
+        }
+    }
+    
+    fn slide_up(&mut self) {
+        for y in 1..self.cells.len() {
+            for x in 0..self.cells[0].len() {
+                if self.cells[y][x].is_empty() {
+                    continue;
+                }
+                let mut cell_y = y;
+                while cell_y > 0 {
+                    if self.cells[cell_y - 1][x].is_occupied() {
+                        if self.cells[cell_y - 1][x] == self.cells[y][x]
+                            && !self.cells[cell_y - 1][x].combined
+                            && !self.cells[y][x].combined
+                        {
+                            self.score += self.cells[y][x].value * 2;
+                            self.cells[cell_y - 1][x] = Cell {
+                                value: self.cells[y][x].value * 2,
+                                combined: true,
+                            };
+                            let cell_px_x =
+                                self.board.x + CELL_PAD * (x as f32 + 1.0) + x as f32 * CELL_SIZE;
+                            let cell_px_y = self.board.y
+                                + CELL_PAD * ((cell_y - 1) as f32 + 1.0)
+                                + (cell_y - 1) as f32 * CELL_SIZE;
+                            self.particles.append(&mut generate_particles(
+                                cell_px_x + CELL_SIZE / 2.0,
+                                cell_px_y + CELL_SIZE / 2.0,
+                                get_cell_color(self.cells[y][x].value),
+                                20,
+                            ));
+                            self.cells[y][x] = Cell::empty();
+                        }
+                        break;
+                    }
+                    cell_y -= 1;
+                }
+                if cell_y != y {
+                    self.cells[cell_y][x] = self.cells[y][x];
+                    self.cells[y][x] = Cell::empty();
+                }
+            }
+        }
     }
 }
 
@@ -184,11 +358,8 @@ fn main() {
         width: BOARD_SIZE,
         height: BOARD_SIZE,
     };
-    // let mut cells = [[Cell::empty(); CELL_DIM]; CELL_DIM];
-    // let mut score = 0;
-    // let mut state = State::Playing;
-    // let mut particles = Vec::new();
-    let mut gs = GameState::new();
+
+    let mut gs = GameState::new(board);
     gs.reset();
 
     while !rl.window_should_close() {
@@ -202,16 +373,16 @@ fn main() {
             // Movement
             if rl.is_key_released(KeyboardKey::KEY_RIGHT) {
                 moved = true;
-                gs.score += slide_right(&mut gs.cells, &mut gs.particles, board);
+                gs.slide_right();
             } else if rl.is_key_released(KeyboardKey::KEY_LEFT) {
                 moved = true;
-                gs.score += slide_left(&mut gs.cells, &mut gs.particles, board);
+                gs.slide_left();
             } else if rl.is_key_released(KeyboardKey::KEY_DOWN) {
                 moved = true;
-                gs.score += slide_down(&mut gs.cells, &mut gs.particles, board);
+                gs.slide_down();
             } else if rl.is_key_released(KeyboardKey::KEY_UP) {
                 moved = true;
-                gs.score += slide_up(&mut gs.cells, &mut gs.particles, board);
+                gs.slide_up();
             }
 
             for y in 0..gs.cells.len() {
@@ -355,201 +526,7 @@ fn random_cells() -> [[Cell; CELL_DIM]; CELL_DIM] {
     cells
 }
 
-fn slide_right(
-    cells: &mut [[Cell; CELL_DIM]; CELL_DIM],
-    particles: &mut Vec<Particle>,
-    board: Rectangle,
-) -> u32 {
-    let mut score = 0;
-    for y in 0..cells.len() {
-        for x in (0..(cells[0].len() - 1)).rev() {
-            if cells[y][x].is_empty() {
-                continue;
-            }
-            let mut cell_x = x;
-            while cell_x < cells[0].len() - 1 {
-                if cells[y][cell_x + 1].is_occupied() {
-                    if cells[y][cell_x + 1] == cells[y][x]
-                        && !cells[y][cell_x + 1].combined
-                        && !cells[y][x].combined
-                    {
-                        score += cells[y][x].value * 2;
-                        cells[y][cell_x + 1] = Cell {
-                            value: cells[y][x].value * 2,
-                            combined: true,
-                        };
-                        let cell_px_x = board.x
-                            + CELL_PAD * ((cell_x + 1) as f32 + 1.0)
-                            + (cell_x + 1) as f32 * CELL_SIZE;
-                        let cell_px_y =
-                            board.y + CELL_PAD * (y as f32 + 1.0) + y as f32 * CELL_SIZE;
-                        particles.append(&mut generate_particles(
-                            cell_px_x + CELL_SIZE / 2.0,
-                            cell_px_y + CELL_SIZE / 2.0,
-                            get_cell_color(cells[y][x].value),
-                            20,
-                        ));
-                        cells[y][x] = Cell::empty();
-                    }
-                    break;
-                }
-                cell_x += 1;
-            }
-            if cell_x != x {
-                cells[y][cell_x] = cells[y][x];
-                cells[y][x] = Cell::empty();
-            }
-        }
-    }
-    score
-}
 
-fn slide_left(
-    cells: &mut [[Cell; CELL_DIM]; CELL_DIM],
-    particles: &mut Vec<Particle>,
-    board: Rectangle,
-) -> u32 {
-    let mut score = 0;
-    for y in 0..cells.len() {
-        for x in 1..cells[0].len() {
-            if cells[y][x].is_empty() {
-                continue;
-            }
-            let mut cell_x = x;
-            while cell_x > 0 {
-                if cells[y][cell_x - 1].is_occupied() {
-                    if cells[y][cell_x - 1] == cells[y][x]
-                        && !cells[y][cell_x - 1].combined
-                        && !cells[y][x].combined
-                    {
-                        score += cells[y][x].value * 2;
-                        cells[y][cell_x - 1] = Cell {
-                            value: cells[y][x].value * 2,
-                            combined: true,
-                        };
-                        let cell_px_x = board.x
-                            + CELL_PAD * ((cell_x - 1) as f32 + 1.0)
-                            + (cell_x - 1) as f32 * CELL_SIZE;
-                        let cell_px_y =
-                            board.y + CELL_PAD * (y as f32 + 1.0) + y as f32 * CELL_SIZE;
-                        particles.append(&mut generate_particles(
-                            cell_px_x + CELL_SIZE / 2.0,
-                            cell_px_y + CELL_SIZE / 2.0,
-                            get_cell_color(cells[y][x].value),
-                            20,
-                        ));
-                        cells[y][x] = Cell::empty();
-                    }
-                    break;
-                }
-                cell_x -= 1;
-            }
-            if cell_x != x {
-                cells[y][cell_x] = cells[y][x];
-                cells[y][x] = Cell::empty();
-            }
-        }
-    }
-    score
-}
-
-fn slide_down(
-    cells: &mut [[Cell; CELL_DIM]; CELL_DIM],
-    particles: &mut Vec<Particle>,
-    board: Rectangle,
-) -> u32 {
-    let mut score = 0;
-    for y in (0..(cells.len() - 1)).rev() {
-        for x in 0..cells[0].len() {
-            if cells[y][x].is_empty() {
-                continue;
-            }
-            let mut cell_y = y;
-            while cell_y < cells.len() - 1 {
-                if cells[cell_y + 1][x].is_occupied() {
-                    if cells[cell_y + 1][x] == cells[y][x]
-                        && !cells[cell_y + 1][x].combined
-                        && !cells[y][x].combined
-                    {
-                        score += cells[y][x].value * 2;
-                        cells[cell_y + 1][x] = Cell {
-                            value: cells[y][x].value * 2,
-                            combined: true,
-                        };
-                        let cell_px_x =
-                            board.x + CELL_PAD * (x as f32 + 1.0) + x as f32 * CELL_SIZE;
-                        let cell_px_y = board.y
-                            + CELL_PAD * ((cell_y + 1) as f32 + 1.0)
-                            + (cell_y + 1) as f32 * CELL_SIZE;
-                        particles.append(&mut generate_particles(
-                            cell_px_x + CELL_SIZE / 2.0,
-                            cell_px_y + CELL_SIZE / 2.0,
-                            get_cell_color(cells[y][x].value),
-                            20,
-                        ));
-                        cells[y][x] = Cell::empty();
-                    }
-                    break;
-                }
-                cell_y += 1;
-            }
-            if cell_y != y {
-                cells[cell_y][x] = cells[y][x];
-                cells[y][x] = Cell::empty();
-            }
-        }
-    }
-    score
-}
-
-fn slide_up(
-    cells: &mut [[Cell; CELL_DIM]; CELL_DIM],
-    particles: &mut Vec<Particle>,
-    board: Rectangle,
-) -> u32 {
-    let mut score = 0;
-    for y in 1..cells.len() {
-        for x in 0..cells[0].len() {
-            if cells[y][x].is_empty() {
-                continue;
-            }
-            let mut cell_y = y;
-            while cell_y > 0 {
-                if cells[cell_y - 1][x].is_occupied() {
-                    if cells[cell_y - 1][x] == cells[y][x]
-                        && !cells[cell_y - 1][x].combined
-                        && !cells[y][x].combined
-                    {
-                        score += cells[y][x].value * 2;
-                        cells[cell_y - 1][x] = Cell {
-                            value: cells[y][x].value * 2,
-                            combined: true,
-                        };
-                        let cell_px_x =
-                            board.x + CELL_PAD * (x as f32 + 1.0) + x as f32 * CELL_SIZE;
-                        let cell_px_y = board.y
-                            + CELL_PAD * ((cell_y - 1) as f32 + 1.0)
-                            + (cell_y - 1) as f32 * CELL_SIZE;
-                        particles.append(&mut generate_particles(
-                            cell_px_x + CELL_SIZE / 2.0,
-                            cell_px_y + CELL_SIZE / 2.0,
-                            get_cell_color(cells[y][x].value),
-                            20,
-                        ));
-                        cells[y][x] = Cell::empty();
-                    }
-                    break;
-                }
-                cell_y -= 1;
-            }
-            if cell_y != y {
-                cells[cell_y][x] = cells[y][x];
-                cells[y][x] = Cell::empty();
-            }
-        }
-    }
-    score
-}
 
 fn decrease_abs(mut x: f32, amount: f32) -> f32 {
     if x > 0.0 {
