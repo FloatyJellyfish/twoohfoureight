@@ -175,7 +175,7 @@ const PARTICLE_FRICTION: f32 = 20.0;
 fn main() {
     let (mut rl, thread) = raylib::init()
         .size(WIDTH, HEIGHT)
-        .title("Hello, World")
+        .title("Two Oh Four Eight")
         .build();
 
     let board = Rectangle {
