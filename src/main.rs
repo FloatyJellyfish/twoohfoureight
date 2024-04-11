@@ -32,6 +32,48 @@ impl Cell {
     fn is_occupied(&self) -> bool {
         !self.is_empty()
     }
+
+    fn render(&self, x: f32, y: f32, d: &mut RaylibDrawHandle) {
+        if !self.is_empty() {
+            d.draw_rectangle_rounded(
+                Rectangle {
+                    x,
+                    y,
+                    width: CELL_SIZE,
+                    height: CELL_SIZE,
+                },
+                0.1,
+                10,
+                get_cell_color(self.value),
+            );
+        }
+        d.draw_rectangle_rounded_lines(
+            Rectangle {
+                x,
+                y,
+                width: CELL_SIZE,
+                height: CELL_SIZE,
+            },
+            0.1,
+            10,
+            2.0,
+            Color::BEIGE,
+        );
+        if !self.is_empty() {
+            let text_size = d.get_font_default().measure_text(
+                format!("{}", self.value).as_str(),
+                30.0,
+                2.0,
+            );
+            d.draw_text(
+                format!("{}", self.value).as_str(),
+                (x + CELL_SIZE / 2.0 - text_size.x / 2.0) as i32,
+                (y + CELL_SIZE / 2.0 - text_size.y / 2.0) as i32,
+                30,
+                BACKGROUND_COLOR,
+            );
+        }
+    }
 }
 
 impl PartialEq for Cell {
@@ -458,46 +500,7 @@ fn draw_board(d: &mut RaylibDrawHandle, cells: [[Cell; CELL_DIM]; CELL_DIM], boa
         for x in 0..cells[0].len() {
             let cell_x = board.x + CELL_PAD * (x as f32 + 1.0) + x as f32 * CELL_SIZE;
             let cell_y = board.y + CELL_PAD * (y as f32 + 1.0) + y as f32 * CELL_SIZE;
-            let cell = cells[y][x];
-            if !cell.is_empty() {
-                d.draw_rectangle_rounded(
-                    Rectangle {
-                        x: cell_x,
-                        y: cell_y,
-                        width: CELL_SIZE,
-                        height: CELL_SIZE,
-                    },
-                    0.1,
-                    10,
-                    get_cell_color(cell.value),
-                );
-            }
-            d.draw_rectangle_rounded_lines(
-                Rectangle {
-                    x: cell_x,
-                    y: cell_y,
-                    width: CELL_SIZE,
-                    height: CELL_SIZE,
-                },
-                0.1,
-                10,
-                2.0,
-                Color::BEIGE,
-            );
-            if !cell.is_empty() {
-                let text_size = d.get_font_default().measure_text(
-                    format!("{}", cell.value).as_str(),
-                    30.0,
-                    2.0,
-                );
-                d.draw_text(
-                    format!("{}", cell.value).as_str(),
-                    (cell_x + CELL_SIZE / 2.0 - text_size.x / 2.0) as i32,
-                    (cell_y + CELL_SIZE / 2.0 - text_size.y / 2.0) as i32,
-                    30,
-                    BACKGROUND_COLOR,
-                );
-            }
+            cells[y][x].render(cell_x, cell_y, d);
         }
     }
 }
