@@ -100,7 +100,7 @@ impl Display for Cell {
 enum State {
     Playing,
     GameOwover,
-    _Victory,
+    Victory,
 }
 
 #[derive(Copy, Clone)]
@@ -215,9 +215,13 @@ impl GameState {
                             && !self.cells[y][cell_x + 1].combined
                             && !self.cells[y][x].combined
                         {
-                            self.score += self.cells[y][x].value * 2;
+                            let new_value = self.cells[y][x].value * 2;
+                            if new_value >= MAX_SCORE {
+                                self.state = State::Victory;
+                            }
+                            self.score += new_value;
                             self.cells[y][cell_x + 1] = Cell {
-                                value: self.cells[y][x].value * 2,
+                                value: new_value,
                                 combined: true,
                             };
                             let cell_px_x = self.board.x
@@ -258,9 +262,13 @@ impl GameState {
                             && !self.cells[y][cell_x - 1].combined
                             && !self.cells[y][x].combined
                         {
-                            self.score += self.cells[y][x].value * 2;
+                            let new_value = self.cells[y][x].value * 2;
+                            if new_value >= MAX_SCORE {
+                                self.state = State::Victory;
+                            }
+                            self.score += new_value;
                             self.cells[y][cell_x - 1] = Cell {
-                                value: self.cells[y][x].value * 2,
+                                value: new_value,
                                 combined: true,
                             };
                             let cell_px_x = self.board.x
@@ -301,9 +309,13 @@ impl GameState {
                             && !self.cells[cell_y + 1][x].combined
                             && !self.cells[y][x].combined
                         {
-                            self.score += self.cells[y][x].value * 2;
+                            let new_value = self.cells[y][x].value * 2;
+                            if new_value >= MAX_SCORE {
+                                self.state = State::Victory;
+                            }
+                            self.score += new_value;
                             self.cells[cell_y + 1][x] = Cell {
-                                value: self.cells[y][x].value * 2,
+                                value: new_value,
                                 combined: true,
                             };
                             let cell_px_x =
@@ -344,9 +356,13 @@ impl GameState {
                             && !self.cells[cell_y - 1][x].combined
                             && !self.cells[y][x].combined
                         {
-                            self.score += self.cells[y][x].value * 2;
+                            let new_value = self.cells[y][x].value * 2;
+                            if new_value >= MAX_SCORE {
+                                self.state = State::Victory;
+                            }
+                            self.score += new_value;
                             self.cells[cell_y - 1][x] = Cell {
-                                value: self.cells[y][x].value * 2,
+                                value: new_value,
                                 combined: true,
                             };
                             let cell_px_x =
@@ -476,13 +492,33 @@ fn main() {
         draw_board(&mut d, gs.cells, board);
 
         if gs.state == State::GameOwover {
-            d.draw_rectangle_rounded(board, 0.05, 10, Color::new(64, 64, 128, 196));
-            let text_size = d.get_font_default().measure_text("Game OwOver", 50.0, 2.0);
-            d.draw_text(
-                "Game OwOver",
-                (board.x + board.width / 2.0 - text_size.x / 2.0) as i32,
-                (board.y + board.height / 2.0 - text_size.y / 2.0) as i32,
-                50,
+            let text = "Game OwOver :(";
+            d.draw_rectangle_rounded(board, 0.05, 10, Color::new(128, 64, 64, 196));
+            let text_size = d.get_font_default().measure_text(text, 45.0, 5.0);
+            d.draw_text_ex(
+                d.get_font_default(),
+                text,
+                Vector2 {
+                    x: (board.x + board.width / 2.0 - text_size.x / 2.0),
+                    y: (board.y + board.height / 2.0 - text_size.y / 2.0),
+                },
+                45.0,
+                5.0,
+                Color::BEIGE,
+            );
+        } else if gs.state == State::Victory {
+            let text = "You win :D";
+            d.draw_rectangle_rounded(board, 0.05, 10, Color::new(64, 128, 64, 196));
+            let text_size = d.get_font_default().measure_text(text, 45.0, 5.0);
+            d.draw_text_ex(
+                d.get_font_default(),
+                text,
+                Vector2 {
+                    x: (board.x + board.width / 2.0 - text_size.x / 2.0),
+                    y: (board.y + board.height / 2.0 - text_size.y / 2.0),
+                },
+                45.0,
+                5.0,
                 Color::BEIGE,
             );
         }
